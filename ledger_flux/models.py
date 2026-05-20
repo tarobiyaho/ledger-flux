@@ -53,16 +53,17 @@ class TokenTransfer(BaseModel):
     @field_validator("from_address", "to_address", "contract_address", mode="before")
     @classmethod
     def normalize_address(cls, v: str) -> str:
-        if not v.startswith("0x"):
-            raise ValueError(f"Address must start with 0x: {v}")
+        if not v or not v.startswith("0x"):
+            return v if v else "0x0000000000000000000000000000000000000000"
         return v.lower()
 
     @field_validator("token_type", mode="before")
     @classmethod
     def validate_token_type(cls, v: str) -> str:
-        if v not in ("erc20", "erc721"):
-            raise ValueError(f"token_type must be 'erc20' or 'erc721': {v}")
-        return v
+        v_lower = v.lower().replace("-", "").replace("_", "")
+        if "erc721" in v_lower or "erc1155" in v_lower:
+            return "erc721"
+        return "erc20"
 
 
 class ExportResult(BaseModel):
@@ -100,5 +101,6 @@ class ChainConfig(BaseModel):
     chain_id: int
     rpc_url: str
     explorer_api: Optional[str] = None
+    blockscout_url: Optional[str] = None
     native_symbol: str = "ETH"
     batch_size: int = 2000

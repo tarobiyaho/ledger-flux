@@ -53,7 +53,7 @@ def get_wallet_transfers(
     for key in chain_keys:
         cfg = get_chain(key)
         fetcher = Fetcher(cfg)
-        result = fetcher.fetch_all(address, from_block=from_block, to_block=to_block)
+        result = fetcher.fetch_all(address)
         all_txs.extend(result["transactions"])
         all_transfers.extend(result["transfers"])
 
