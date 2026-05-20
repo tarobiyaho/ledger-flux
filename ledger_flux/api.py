@@ -1,17 +1,21 @@
-"""FastAPI REST API for ledger-flux."""
+"""FastAPI REST API + web UI for ledger-flux."""
 from __future__ import annotations
+from pathlib import Path
 from typing import Optional, List
 from fastapi import FastAPI, Query, HTTPException
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from ledger_flux.chains import get_chain, parse_chains
 from ledger_flux.fetcher import Fetcher
 from ledger_flux.models import TxRecord, TokenTransfer, WalletSummary
 
 app = FastAPI(
-    title="ledger-flux",
-    description="EVM wallet activity exporter API",
-    version="0.1.0",
+    title="Ledger Flux",
+    description="EVM wallet activity explorer — multi-chain transaction & token transfer tracker",
+    version="0.2.0",
 )
+
+TEMPLATE_DIR = Path(__file__).parent / "templates"
 
 
 class TransferResponse(BaseModel):
@@ -29,6 +33,13 @@ class SummaryResponse(BaseModel):
     erc20_transfers: int
     erc721_transfers: int
     unique_tokens: int
+
+
+@app.get("/", response_class=HTMLResponse)
+def index():
+    """Serve the web UI."""
+    html_path = TEMPLATE_DIR / "index.html"
+    return HTMLResponse(content=html_path.read_text())
 
 
 @app.get("/wallet/{address}/transfers", response_model=TransferResponse)

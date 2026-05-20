@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ledger Flux — EVM Wallet Explorer</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0a0e17;--surface:#111827;--card:#1a2236;--border:#1e2d4a;
+  --text:#e2e8f0;--muted:#64748b;--accent:#3b82f6;--accent2:#8b5cf6;
+  --green:#22c55e;--red:#ef4444;--orange:#f59e0b;--cyan:#06b6d4;
+  --grad:linear-gradient(135deg,#3b82f6,#8b5cf6);
+}
+body{background:var(--bg);color:var(--text);font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;overflow-x:hidden}
+a{color:var(--accent);text-decoration:none;transition:color .2s}
+a:hover{color:var(--cyan)}
+.header{background:linear-gradient(180deg,rgba(59,130,246,.08) 0%,transparent 100%);border-bottom:1px solid var(--border);padding:1.5rem 0}
+.container{max-width:1200px;margin:0 auto;padding:0 1.5rem}
+.logo{display:flex;align-items:center;gap:.75rem;font-size:1.5rem;font-weight:700;letter-spacing:-.02em}
+.logo span{background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.logo-icon{width:36px;height:36px;background:var(--grad);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;-webkit-text-fill-color:white}
+.subtitle{color:var(--muted);font-size:.875rem;margin-top:.25rem}
+.search-section{padding:2rem 0}
+.search-box{display:flex;gap:.75rem;max-width:800px;margin:0 auto}
+.search-box input{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:.875rem 1.25rem;color:var(--text);font-size:.95rem;font-family:monospace;outline:none;transition:border-color .2s}
+.search-box input:focus{border-color:var(--accent)}
+.search-box input::placeholder{color:var(--muted);font-family:sans-serif}
+.btn{background:var(--grad);color:#fff;border:none;border-radius:12px;padding:.875rem 2rem;font-size:.95rem;font-weight:600;cursor:pointer;transition:transform .15s,box-shadow .2s;white-space:nowrap}
+.btn:hover{transform:translateY(-1px);box-shadow:0 4px 20px rgba(59,130,246,.3)}
+.btn:active{transform:translateY(0)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+.chains-row{display:flex;gap:.5rem;justify-content:center;margin-top:1rem;flex-wrap:wrap}
+.chain-chip{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.375rem .75rem;font-size:.8rem;color:var(--muted);cursor:pointer;transition:all .2s;user-select:none}
+.chain-chip.active{background:rgba(59,130,246,.15);border-color:var(--accent);color:var(--accent)}
+.chain-chip:hover{border-color:var(--accent);color:var(--text)}
+
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin:1.5rem 0}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.25rem;text-align:center;transition:border-color .2s}
+.stat-card:hover{border-color:var(--accent)}
+.stat-value{font-size:1.75rem;font-weight:700;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.stat-label{color:var(--muted);font-size:.8rem;margin-top:.25rem;text-transform:uppercase;letter-spacing:.05em}
+
+.section{margin:2rem 0}
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+.section-title{font-size:1.1rem;font-weight:600;display:flex;align-items:center;gap:.5rem}
+.section-title .icon{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:.9rem}
+.tx-icon{background:rgba(59,130,246,.15);color:var(--accent)}
+.transfer-icon{background:rgba(139,92,246,.15);color:var(--accent2)}
+.badge{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:.25rem .75rem;font-size:.8rem;color:var(--muted)}
+
+.table-wrap{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.table-scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.875rem}
+thead{background:rgba(255,255,255,.03)}
+th{padding:.75rem 1rem;text-align:left;color:var(--muted);font-weight:500;font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:.75rem 1rem;border-bottom:1px solid rgba(255,255,255,.03);white-space:nowrap}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.02)}
+.hash{font-family:monospace;font-size:.8rem;color:var(--accent)}
+.addr{font-family:monospace;font-size:.8rem;max-width:160px;overflow:hidden;text-overflow:ellipsis;display:inline-block;vertical-align:middle}
+.chain-badge{display:inline-flex;align-items:center;gap:.25rem;background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.2);border-radius:6px;padding:.125rem .5rem;font-size:.75rem;color:var(--accent);font-weight:500}
+.direction{display:inline-flex;align-items:center;gap:.25rem;font-weight:500;font-size:.8rem;padding:.125rem .5rem;border-radius:6px}
+.dir-in{background:rgba(34,197,94,.1);color:var(--green)}
+.dir-out{background:rgba(239,68,68,.1);color:var(--red)}
+.dir-self{background:rgba(245,158,11,.1);color:var(--orange)}
+.value{font-weight:600;font-family:monospace}
+.timestamp{color:var(--muted);font-size:.8rem}
+.token-badge{display:inline-flex;align-items:center;gap:.25rem;background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.2);border-radius:6px;padding:.125rem .5rem;font-size:.75rem;color:var(--accent2);font-weight:500}
+
+.loading{text-align:center;padding:4rem 0}
+.spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 1rem}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{color:var(--muted);font-size:.9rem}
+
+.empty{text-align:center;padding:3rem;color:var(--muted)}
+.empty-icon{font-size:2.5rem;margin-bottom:.5rem}
+
+.error-box{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:12px;padding:1rem 1.25rem;color:var(--red);margin:1rem 0;font-size:.9rem}
+
+.footer{text-align:center;padding:2rem 0;color:var(--muted);font-size:.8rem;border-top:1px solid var(--border);margin-top:3rem}
+.footer a{color:var(--accent)}
+
+.wallet-header{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.25rem;margin:1.5rem 0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem}
+.wallet-addr{font-family:monospace;font-size:1rem;word-break:break-all}
+.wallet-label{color:var(--muted);font-size:.8rem;margin-bottom:.25rem}
+.copy-btn{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.375rem .75rem;color:var(--muted);cursor:pointer;font-size:.8rem;transition:all .2s}
+.copy-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+.tab-row{display:flex;gap:.5rem;margin-bottom:1rem;flex-wrap:wrap}
+.tab{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.5rem 1rem;font-size:.85rem;color:var(--muted);cursor:pointer;transition:all .2s}
+.tab.active{background:rgba(59,130,246,.15);border-color:var(--accent);color:var(--accent)}
+.tab:hover{border-color:var(--accent);color:var(--text)}
+
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeIn .3s ease-out}
+
+.token-icon{width:20px;height:20px;border-radius:50%;display:inline-block;vertical-align:middle;margin-right:4px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="container">
+    <div class="logo">
+      <div class="logo-icon">⚡</div>
+      <span>Ledger Flux</span>
+    </div>
+    <div class="subtitle">EVM Wallet Activity Explorer — Multi-chain transaction & token transfer tracker</div>
+  </div>
+</div>
+
+<div class="search-section">
+  <div class="container">
+    <div class="search-box">
+      <input type="text" id="address" placeholder="Enter EVM wallet address (0x...)" spellcheck="false" autocomplete="off">
+      <button class="btn" id="searchBtn" onclick="search()">Explore</button>
+    </div>
+    <div class="chains-row" id="chainPicker">
+      <div class="chain-chip active" data-chain="eth" onclick="toggleChain(this)">⟠ Ethereum</div>
+      <div class="chain-chip" data-chain="base" onclick="toggleChain(this)">🔵 Base</div>
+      <div class="chain-chip" data-chain="arb" onclick="toggleChain(this)">🔷 Arbitrum</div>
+      <div class="chain-chip" data-chain="op" onclick="toggleChain(this)">🔴 Optimism</div>
+      <div class="chain-chip" data-chain="matic" onclick="toggleChain(this)">🟣 Polygon</div>
+    </div>
+  </div>
+</div>
+
+<div class="container" id="content" style="display:none"></div>
+
+<div class="footer container">
+  <p>Ledger Flux — Open source EVM wallet activity exporter</p>
+  <p style="margin-top:.25rem"><a href="/docs">API Docs</a> · <a href="https://github.com/asbestos22/ledger-flux" target="_blank">GitHub</a></p>
+</div>
+
+<script>
+const API = '';
+let selectedChains = ['eth'];
+
+function toggleChain(el) {
+  const chain = el.dataset.chain;
+  el.classList.toggle('active');
+  if (el.classList.contains('active')) {
+    if (!selectedChains.includes(chain)) selectedChains.push(chain);
+  } else {
+    selectedChains = selectedChains.filter(c => c !== chain);
+  }
+  if (selectedChains.length === 0) {
+    el.classList.add('active');
+    selectedChains = [chain];
+  }
+}
+
+document.getElementById('address').addEventListener('keydown', e => {
+  if (e.key === 'Enter') search();
+});
+
+// Auto-fill from URL hash
+if (window.location.hash) {
+  const addr = decodeURIComponent(window.location.hash.slice(1));
+  if (addr.startsWith('0x') && addr.length === 42) {
+    document.getElementById('address').value = addr;
+    setTimeout(search, 100);
+  }
+}
+
+function shortAddr(a) {
+  if (!a) return '—';
+  return a.slice(0, 6) + '…' + a.slice(-4);
+}
+
+function shortHash(h) {
+  if (!h) return '—';
+  return h.slice(0, 10) + '…';
+}
+
+function fmtDate(ts) {
+  if (!ts) return '—';
+  const d = new Date(ts * 1000);
+  if (isNaN(d)) return '—';
+  const now = new Date();
+  const diff = (now - d) / 1000;
+  const abs = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const time = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+  if (diff < 3600) return Math.floor(diff / 60) + 'm ago · ' + abs + ' ' + time;
+  if (diff < 86400) return Math.floor(diff / 3600) + 'h ago · ' + abs + ' ' + time;
+  return abs + ' ' + time;
+}
+
+function fmtValue(wei) {
+  if (!wei || wei === '0') return '0';
+  const eth = Number(wei) / 1e18;
+  if (eth < 0.0001) return '<0.0001';
+  if (eth < 1) return eth.toFixed(4);
+  if (eth < 1000) return eth.toFixed(2);
+  return eth.toLocaleString('en-US', { maximumFractionDigits: 2 });
+}
+
+function getExplorer(chain, hash, type) {
+  const explorers = {
+    eth: 'https://etherscan.io',
+    base: 'https://basescan.org',
+    arb: 'https://arbiscan.io',
+    op: 'https://optimistic.etherscan.io',
+    matic: 'https://polygonscan.com',
+  };
+  const base = explorers[chain] || 'https://etherscan.io';
+  const path = type === 'tx' ? '/tx/' : '/address/';
+  return base + path + hash;
+}
+
+function getChainColor(chain) {
+  const colors = { eth: '#627eea', base: '#0052ff', arb: '#28a0f0', op: '#ff0420', matic: '#8247e5' };
+  return colors[chain] || '#3b82f6';
+}
+
+function getChainEmoji(chain) {
+  const e = { eth: '⟠', base: '🔵', arb: '🔷', op: '🔴', matic: '🟣' };
+  return e[chain] || '⛓';
+}
+
+async function search() {
+  const addr = document.getElementById('address').value.trim();
+  if (!addr || !addr.startsWith('0x') || addr.length !== 42) {
+    alert('Enter a valid EVM address (0x + 40 hex chars)');
+    return;
+  }
+  window.location.hash = addr;
+  const btn = document.getElementById('searchBtn');
+  btn.disabled = true;
+  btn.textContent = 'Loading…';
+  const content = document.getElementById('content');
+  content.style.display = 'block';
+  content.innerHTML = '<div class="loading"><div class="spinner"></div><div class="loading-text">Fetching wallet activity from ' + selectedChains.join(', ').toUpperCase() + '…</div></div>';
+
+  try {
+    const chainsParam = selectedChains.join(',');
+    const [transfersRes, summaryRes] = await Promise.all([
+      fetch(API + '/wallet/' + addr + '/transfers?chains=' + chainsParam),
+      fetch(API + '/wallet/' + addr + '/summary?chains=' + chainsParam),
+    ]);
+
+    if (!transfersRes.ok) {
+      const err = await transfersRes.json().catch(() => ({}));
+      throw new Error(err.detail || 'API error ' + transfersRes.status);
+    }
+
+    const data = await transfersRes.json();
+    const summary = summaryRes.ok ? await summaryRes.json() : null;
+
+    // Update summary
+    const totalTx = summary?.total_transactions ?? data.transactions.length;
+    const totalTf = summary?.total_transfers ?? data.transfers.length;
+    const erc20 = summary?.erc20_transfers ?? data.transfers.filter(t => t.token_type === 'erc20').length;
+    const erc721 = summary?.erc721_transfers ?? data.transfers.filter(t => t.token_type === 'erc721').length;
+    const uniqueTokens = summary?.unique_tokens ?? new Set(data.transfers.map(t => t.contract_address)).size;
+    const uniqueChains = new Set([...data.transactions.map(t => t.chain), ...data.transfers.map(t => t.chain)]);
+
+    let html = '';
+
+    // Wallet header
+    html += '<div class="wallet-header fade-in">';
+    html += '<div><div class="wallet-label">Wallet Address</div><div class="wallet-addr">' + addr + '</div></div>';
+    html += '<button class="copy-btn" onclick="navigator.clipboard.writeText(\'' + addr + '\').then(()=>this.textContent=\'Copied!\')">📋 Copy</button>';
+    html += '</div>';
+
+    // Stats
+    html += '<div class="stats-grid fade-in">';
+    html += '<div class="stat-card"><div class="stat-value">' + totalTx + '</div><div class="stat-label">Transactions</div></div>';
+    html += '<div class="stat-card"><div class="stat-value">' + totalTf + '</div><div class="stat-label">Token Transfers</div></div>';
+    html += '<div class="stat-card"><div class="stat-value">' + erc20 + '</div><div class="stat-label">ERC-20</div></div>';
+    html += '<div class="stat-card"><div class="stat-value">' + erc721 + '</div><div class="stat-label">NFTs</div></div>';
+    html += '<div class="stat-card"><div class="stat-value">' + uniqueTokens + '</div><div class="stat-label">Unique Tokens</div></div>';
+    html += '<div class="stat-card"><div class="stat-value">' + uniqueChains.size + '</div><div class="stat-label">Chains</div></div>';
+    html += '</div>';
+
+    // Transactions
+    if (data.transactions.length > 0) {
+      html += '<div class="section fade-in">';
+      html += '<div class="section-header"><div class="section-title"><div class="icon tx-icon">↗</div>Transactions</div><div class="badge">' + data.transactions.length + ' total</div></div>';
+      html += '<div class="table-wrap"><div class="table-scroll"><table><thead><tr><th>Time</th><th>Tx Hash</th><th>Chain</th><th>From</th><th>→</th><th>To</th><th>Value</th><th>Gas</th><th>Status</th></tr></thead><tbody>';
+
+      for (const tx of data.transactions) {
+        const dir = tx.from_address === addr.toLowerCase() ? 'out' : tx.to_address === addr.toLowerCase() ? 'in' : 'self';
+        const eth = fmtValue(tx.value_wei);
+        const gasK = tx.gas_used ? (tx.gas_used / 1000).toFixed(0) + 'k' : '—';
+        const statusOk = tx.status === 1;
+        html += '<tr>';
+        html += '<td><div class="timestamp">' + fmtDate(tx.timestamp) + '</div></td>';
+        html += '<td><a class="hash" href="' + getExplorer(tx.chain, tx.tx_hash, 'tx') + '" target="_blank" title="' + tx.tx_hash + '">' + shortHash(tx.tx_hash) + '</a></td>';
+        html += '<td><span class="chain-badge" style="color:' + getChainColor(tx.chain) + ';border-color:' + getChainColor(tx.chain) + '40;background:' + getChainColor(tx.chain) + '15">' + getChainEmoji(tx.chain) + ' ' + tx.chain.toUpperCase() + '</span></td>';
+        html += '<td><a class="addr" href="' + getExplorer(tx.chain, tx.from_address, 'addr') + '" target="_blank" title="' + tx.from_address + '">' + shortAddr(tx.from_address) + '</a></td>';
+        html += '<td><span class="direction dir-' + dir + '">' + (dir === 'in' ? '← IN' : dir === 'out' ? 'OUT →' : '↔') + '</span></td>';
+        html += '<td><a class="addr" href="' + getExplorer(tx.chain, tx.to_address || '', 'addr') + '" target="_blank" title="' + (tx.to_address || '') + '">' + shortAddr(tx.to_address) + '</a></td>';
+        html += '<td class="value">' + (eth !== '0' ? eth + ' ' + (tx.chain === 'matic' ? 'MATIC' : 'ETH') : '—') + '</td>';
+        html += '<td style="color:var(--muted)">' + gasK + '</td>';
+        html += '<td>' + (statusOk ? '<span style="color:var(--green)">✓</span>' : '<span style="color:var(--red)">✗</span>') + '</td>';
+        html += '</tr>';
+      }
+      html += '</tbody></table></div></div></div>';
+    }
+
+    // Token Transfers
+    if (data.transfers.length > 0) {
+      html += '<div class="section fade-in">';
+      html += '<div class="section-header"><div class="section-title"><div class="icon transfer-icon">⇄</div>Token Transfers</div><div class="badge">' + data.transfers.length + ' total</div></div>';
+      html += '<div class="table-wrap"><div class="table-scroll"><table><thead><tr><th>Time</th><th>Tx Hash</th><th>Chain</th><th>Type</th><th>Token</th><th>From</th><th>→</th><th>To</th><th>Value</th></tr></thead><tbody>';
+
+      for (const t of data.transfers) {
+        const dir = t.from_address === addr.toLowerCase() ? 'in' : t.to_address === addr.toLowerCase() ? 'out' : 'self';
+        const isNft = t.token_type === 'erc721';
+        html += '<tr>';
+        html += '<td><div class="timestamp">' + fmtDate(t.timestamp) + '</div></td>';
+        html += '<td><a class="hash" href="' + getExplorer(t.chain, t.tx_hash, 'tx') + '" target="_blank" title="' + t.tx_hash + '">' + shortHash(t.tx_hash) + '</a></td>';
+        html += '<td><span class="chain-badge" style="color:' + getChainColor(t.chain) + ';border-color:' + getChainColor(t.chain) + '40;background:' + getChainColor(t.chain) + '15">' + getChainEmoji(t.chain) + ' ' + t.chain.toUpperCase() + '</span></td>';
+        html += '<td><span class="token-badge">' + (isNft ? '🖼 NFT' : '🪙 ERC-20') + '</span></td>';
+        html += '<td><a class="addr" href="' + getExplorer(t.chain, t.contract_address, 'addr') + '" target="_blank" title="' + t.contract_address + '">' + shortAddr(t.contract_address) + '</a>' + (isNft && t.token_id ? ' #' + t.token_id : '') + '</td>';
+        html += '<td><a class="addr" href="' + getExplorer(t.chain, t.from_address, 'addr') + '" target="_blank" title="' + t.from_address + '">' + shortAddr(t.from_address) + '</a></td>';
+        html += '<td><span class="direction dir-' + dir + '">' + (dir === 'in' ? '← IN' : dir === 'out' ? 'OUT →' : '↔') + '</span></td>';
+        html += '<td><a class="addr" href="' + getExplorer(t.chain, t.to_address, 'addr') + '" target="_blank" title="' + t.to_address + '">' + shortAddr(t.to_address) + '</a></td>';
+        html += '<td class="value">' + (isNft ? '#' + (t.token_id || '?') : fmtValue(t.value)) + '</td>';
+        html += '</tr>';
+      }
+      html += '</tbody></table></div></div></div>';
+    }
+
+    if (data.transactions.length === 0 && data.transfers.length === 0) {
+      html += '<div class="empty fade-in"><div class="empty-icon">🔍</div><p>No activity found for this address on the selected chains.</p></div>';
+    }
+
+    content.innerHTML = html;
+
+  } catch (err) {
+    content.innerHTML = '<div class="error-box fade-in">⚠️ ' + err.message + '</div>';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Explore';
+  }
+}
+</script>
+</body>
+</html>

@@ -63,10 +63,21 @@ class Fetcher:
         for t in data.get("items", []):
             total = t.get("total", {})
             value_str = total.get("value", "0") if isinstance(total, dict) else "0"
+            # Extract real timestamp from Blockscout API
+            ts = None
+            raw_ts = t.get("timestamp") or t.get("block_timestamp")
+            if raw_ts:
+                try:
+                    ts = int(__import__("datetime").datetime.fromisoformat(
+                        str(raw_ts).replace("Z", "+00:00")
+                    ).timestamp())
+                except Exception:
+                    pass
             transfers.append(TokenTransfer(
                 chain=self.config.name,
                 tx_hash=t.get("tx_hash", ""),
                 block_number=t.get("block_number", 0),
+                timestamp=ts,
                 log_index=t.get("log_index", 0),
                 token_type=t.get("token", {}).get("type", "ERC-20"),
                 contract_address=t.get("token", {}).get("address", ""),
