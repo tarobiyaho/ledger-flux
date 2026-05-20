@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ledger-flux"
+version = "0.1.0"
+description = "EVM wallet activity exporter — pulls full tx history, decodes ERC-20/721 events, exports CSV/Parquet"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+dependencies = [
+    "web3>=6.0.0",
+    "pandas>=2.0.0",
+    "pyarrow>=14.0.0",
+    "pydantic>=2.0.0",
+    "typer>=0.9.0",
+    "fastapi>=0.100.0",
+    "uvicorn>=0.23.0",
+    "httpx>=0.24.0",
+]
+
+[project.scripts]
+ledger-flux = "ledger_flux.cli:app"
+
+[tool.setuptools.packages.find]
+include = ["ledger_flux*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

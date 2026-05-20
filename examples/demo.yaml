@@ -1,0 +1,20 @@
+# ledger-flux demo configuration
+chains:
+  - eth
+  - base
+  - arb
+
+# Example addresses to export
+addresses:
+  - "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"  # vitalik.eth
+  - "0x00000000219ab540356cBB839Cbe05303d7705Fa"  # ETH2 Deposit Contract
+
+export:
+  format: csv
+  output_dir: ./exports
+  block_range: last_1000
+
+# API server config
+server:
+  host: 0.0.0.0
+  port: 8000
